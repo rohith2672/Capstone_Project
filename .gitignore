@@ -1,0 +1,26 @@
+# Secrets
+.env
+
+# Generated data (reproducible via etl/generate_sample_data.py and the pipeline itself)
+data/raw/*.csv
+data/lake/**/*.parquet
+run_reports/*.md
+run_reports/*.json
+
+# Keep directory placeholders
+!run_reports/.gitkeep
+!data/lake/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

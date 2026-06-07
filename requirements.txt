@@ -1,0 +1,17 @@
+pandas==2.3.3
+numpy==2.4.4
+boto3==1.34.0
+snowflake-connector-python==4.6.0
+pyarrow==23.0.1
+matplotlib==3.10.9
+pillow==12.2.0
+python-dotenv==1.2.2
+faker==40.21.0
+
+pytest==9.0.3
+pytest-cov==7.1.0
+
+# Optional, for deeper S3 mocking — not required by the test suite
+# (LocalFSBackend's local-filesystem stand-in already gives full pipeline test coverage
+# without it; install only if you want to add moto-based S3 simulation tests)
+# moto==5.0.0
