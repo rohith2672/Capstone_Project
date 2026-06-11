@@ -85,7 +85,7 @@ def generate_architecture_diagram(path: str) -> None:
     bronze = _box(
         ax, (0.6, 11.6), 8.8, 1.5,
         "BRONZE   (validate · dedupe · orphan-check · quarantine-and-continue)\n"
-        "S3:        bronze/<source>/ingest_date=YYYY-MM-DD/*.parquet\n"
+        "S3:        bronze/<source>/ingest_date=YYYY-MM-DD/*.csv\n"
         "Snowflake RAW:  BRONZE_WEBLOGS · BRONZE_USERS · BRONZE_PRODUCTS",
         BRONZE, fontsize=8.7,
     )
@@ -104,7 +104,7 @@ def generate_architecture_diagram(path: str) -> None:
     silver = _box(
         ax, (0.6, 9.3), 8.8, 1.5,
         "SILVER   (parse timestamps · categorize actions · sort · session metrics · enrich)\n"
-        "S3:        silver/{weblogs_clean, users_clean, products_clean}/etl_run_date=.../*.parquet\n"
+        "S3:        silver/{weblogs_clean, users_clean, products_clean}/etl_run_date=.../*.csv\n"
         "Snowflake STAGING:  WEBLOGS_CLEAN · USERS_CLEAN · PRODUCTS_CLEAN",
         SILVER, fontsize=8.7, textcolor=INK,
     )

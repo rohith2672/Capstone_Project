@@ -45,7 +45,7 @@ def test_record_loaded_is_keyed_by_layer_then_table(metrics):
 def test_to_audit_rows_produces_one_row_per_medallion_layer(metrics):
     metrics.record_extracted("weblogs", 100)
     metrics.record_quarantined("weblogs", 10, pd.Series(["null user_id"] * 10))
-    metrics.record_quarantine_path("weblogs", "quarantine/source=weblogs/.../anomalies.parquet")
+    metrics.record_quarantine_path("weblogs", "quarantine/source=weblogs/.../anomalies.csv")
     metrics.record_loaded("bronze", "weblogs", 90)
     metrics.record_loaded("silver", "weblogs_clean", 90)
     metrics.record_loaded("gold", "FACT_USER_ACTIVITY", 90)
@@ -60,7 +60,7 @@ def test_to_audit_rows_produces_one_row_per_medallion_layer(metrics):
     assert by_layer["bronze"]["rows_extracted"] == 100
     assert by_layer["bronze"]["rows_quarantined"] == 10
     assert by_layer["bronze"]["rows_loaded"] == 90
-    assert "anomalies.parquet" in by_layer["bronze"]["quarantine_s3_path"]
+    assert "anomalies.csv" in by_layer["bronze"]["quarantine_s3_path"]
 
     assert by_layer["silver"]["rows_extracted"] == 0
     assert by_layer["silver"]["rows_quarantined"] == 0
@@ -92,7 +92,7 @@ def _populated_metrics():
     m = RunMetrics(etl_run_id="run-abc", etl_run_date="2024-06-07", etl_run_timestamp="2024-06-07T10:00:00")
     m.record_extracted("weblogs", 1000)
     m.record_quarantined("weblogs", 150, pd.Series(["orphan user_id"] * 100 + ["invalid timestamp"] * 50))
-    m.record_quarantine_path("weblogs", "quarantine/source=weblogs/etl_run_date=2024-06-07/etl_run_id=run-abc/anomalies.parquet")
+    m.record_quarantine_path("weblogs", "quarantine/source=weblogs/etl_run_date=2024-06-07/etl_run_id=run-abc/anomalies.csv")
     m.record_loaded("bronze", "weblogs", 850)
     m.record_loaded("silver", "weblogs_clean", 850)
     m.record_loaded("gold", "FACT_USER_ACTIVITY", 850)

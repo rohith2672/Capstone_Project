@@ -157,7 +157,7 @@ def test_flag_long_sessions_uses_std_dev_threshold():
 # ---------------------------------------------------------------------------
 def test_quarantine_path_format():
     path = helpers.quarantine_path("weblogs", "2024-06-07", "abc-123")
-    assert path == "quarantine/source=weblogs/etl_run_date=2024-06-07/etl_run_id=abc-123/anomalies.parquet"
+    assert path == "quarantine/source=weblogs/etl_run_date=2024-06-07/etl_run_id=abc-123/anomalies.csv"
 
 
 def test_build_quarantine_frame_has_expected_columns_and_json_raw_row():

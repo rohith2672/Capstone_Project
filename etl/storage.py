@@ -3,7 +3,7 @@
 WebLogProcessor never constructs boto3 clients itself — it talks only to a
 StorageBackend. This is what lets the entire pipeline run and be tested locally:
 LocalFSBackend is a faithful stand-in that mirrors the EXACT same S3 key layout the
-spec defines (e.g. "bronze/weblogs/ingest_date=2024-06-07/weblogs_chunk_001.parquet")
+spec defines (e.g. "bronze/weblogs/ingest_date=2024-06-07/weblogs_chunk_001.csv")
 on local disk, so swapping to S3Backend later changes nothing about the pipeline logic
 — only which backend the factory returns.
 """
@@ -20,8 +20,8 @@ from etl.config import Settings
 
 def make_key(layer: str, dataset: str, partitions: dict[str, str], filename: str) -> str:
     """Build a partitioned object key, e.g.
-    make_key("bronze", "weblogs", {"ingest_date": "2024-06-07"}, "weblogs_chunk_001.parquet")
-      -> "bronze/weblogs/ingest_date=2024-06-07/weblogs_chunk_001.parquet"
+    make_key("bronze", "weblogs", {"ingest_date": "2024-06-07"}, "weblogs_chunk_001.csv")
+      -> "bronze/weblogs/ingest_date=2024-06-07/weblogs_chunk_001.csv"
     """
     partition_segments = "/".join(f"{k}={v}" for k, v in partitions.items())
     parts = [layer, dataset]

@@ -164,9 +164,9 @@ def test_write_bronze_persists_clean_rows_and_records_metrics(processor, sample_
     clean, _ = processor.validate(sample_users_df, source="users")
     processor.write_bronze(clean, source="users")
 
-    key = f"bronze/users/ingest_date={processor.etl_run_date}/users.parquet"
+    key = f"bronze/users/ingest_date={processor.etl_run_date}/users.csv"
     assert tmp_lake.exists(key)
-    roundtrip = tmp_lake.read_parquet(key)
+    roundtrip = tmp_lake.read_csv(key)
     assert roundtrip["user_id"].tolist() == clean["user_id"].tolist()
     assert processor.metrics.loaded["bronze"]["users"] == len(clean)
 
@@ -177,7 +177,7 @@ def test_write_bronze_chunked_weblogs_uses_indexed_filename(processor, sample_we
     clean, _ = processor.validate(sample_weblogs_df, source="weblogs")
     processor.write_bronze(clean, source="weblogs", chunk_index=1)
 
-    key = f"bronze/weblogs/ingest_date={processor.etl_run_date}/weblogs_chunk_001.parquet"
+    key = f"bronze/weblogs/ingest_date={processor.etl_run_date}/weblogs_chunk_001.csv"
     assert tmp_lake.exists(key)
 
 
@@ -193,7 +193,7 @@ def test_write_quarantine_persists_rejected_rows_and_records_metrics(processor, 
     _, quarantine = processor.validate(df, source="products")
     processor.write_quarantine(quarantine, source="products")
 
-    key = f"quarantine/source=products/etl_run_date={processor.etl_run_date}/etl_run_id={processor.etl_run_id}/anomalies.parquet"
+    key = f"quarantine/source=products/etl_run_date={processor.etl_run_date}/etl_run_id={processor.etl_run_id}/anomalies.csv"
     assert tmp_lake.exists(key)
     assert processor.metrics.quarantined["products"] == len(quarantine)
     assert processor.metrics.rejection_reason_counts["products"]["null product_id"] == 1

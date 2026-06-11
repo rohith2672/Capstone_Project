@@ -107,7 +107,7 @@ def test_get_storage_backend_returns_local_by_default(tmp_path):
 
 
 def test_get_storage_backend_raises_clear_error_when_s3_creds_missing():
-    settings = Settings(storage_backend="s3")
+    settings = Settings(storage_backend="s3", s3_bucket_name="")
     try:
         get_storage_backend(settings)
         assert False, "expected ConfigError"

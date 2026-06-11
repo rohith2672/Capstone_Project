@@ -59,11 +59,11 @@ def seeded_processor(processor, tmp_lake):
             ],
         }
     )
-    tmp_lake.write_parquet(
-        weblogs_chunk1, make_key("bronze", "weblogs", {"ingest_date": run_date}, "weblogs_chunk_001.parquet")
+    tmp_lake.write_csv(
+        weblogs_chunk1, make_key("bronze", "weblogs", {"ingest_date": run_date}, "weblogs_chunk_001.csv")
     )
-    tmp_lake.write_parquet(
-        weblogs_chunk2, make_key("bronze", "weblogs", {"ingest_date": run_date}, "weblogs_chunk_002.parquet")
+    tmp_lake.write_csv(
+        weblogs_chunk2, make_key("bronze", "weblogs", {"ingest_date": run_date}, "weblogs_chunk_002.csv")
     )
 
     users = pd.DataFrame(
@@ -82,8 +82,8 @@ def seeded_processor(processor, tmp_lake):
             "price": [9.99, 19.99],
         }
     )
-    tmp_lake.write_parquet(users, make_key("bronze", "users", {"ingest_date": run_date}, "users.parquet"))
-    tmp_lake.write_parquet(products, make_key("bronze", "products", {"ingest_date": run_date}, "products.parquet"))
+    tmp_lake.write_csv(users, make_key("bronze", "users", {"ingest_date": run_date}, "users.csv"))
+    tmp_lake.write_csv(products, make_key("bronze", "products", {"ingest_date": run_date}, "products.csv"))
 
     return processor
 
@@ -169,15 +169,15 @@ def test_write_silver_persists_each_dataset_to_its_partitioned_layout(seeded_pro
     run_date = seeded_processor.etl_run_date
     run_id = seeded_processor.etl_run_id
 
-    weblogs_key = f"silver/weblogs_clean/etl_run_date={run_date}/etl_run_id={run_id}/weblogs_silver.parquet"
-    users_key = f"silver/users_clean/etl_run_date={run_date}/users_silver.parquet"
-    products_key = f"silver/products_clean/etl_run_date={run_date}/products_silver.parquet"
+    weblogs_key = f"silver/weblogs_clean/etl_run_date={run_date}/etl_run_id={run_id}/weblogs_silver.csv"
+    users_key = f"silver/users_clean/etl_run_date={run_date}/users_silver.csv"
+    products_key = f"silver/products_clean/etl_run_date={run_date}/products_silver.csv"
 
     assert tmp_lake.exists(weblogs_key)
     assert tmp_lake.exists(users_key)
     assert tmp_lake.exists(products_key)
 
-    roundtrip = tmp_lake.read_parquet(weblogs_key)
+    roundtrip = tmp_lake.read_csv(weblogs_key)
     assert len(roundtrip) == len(seeded_processor._silver_weblogs)
     assert seeded_processor.metrics.loaded["silver"]["weblogs_clean"] == len(roundtrip)
     assert seeded_processor.metrics.loaded["silver"]["users_clean"] == 2

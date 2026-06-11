@@ -165,15 +165,15 @@ def flag_long_sessions(durations_s: pd.Series, std_devs: float = 2.0) -> pd.Seri
 # ---------------------------------------------------------------------------
 def quarantine_path(source: str, etl_run_date: str, etl_run_id: str, chunk_index: int | None = None) -> str:
     """Build the quarantine object key:
-    quarantine/source=<source>/etl_run_date=<date>/etl_run_id=<uuid>/anomalies.parquet
+    quarantine/source=<source>/etl_run_date=<date>/etl_run_id=<uuid>/anomalies.csv
 
-    `chunk_index`, when given, produces `anomalies_chunk_NNN.parquet` instead —
+    `chunk_index`, when given, produces `anomalies_chunk_NNN.csv` instead —
     weblogs streams in multiple chunks, each producing its own quarantine batch
     under the SAME etl_run_id partition; without a per-chunk filename, each
     write_quarantine() call would overwrite the previous chunk's anomalies at
-    the same key (mirrors why write_bronze names files `<source>_chunk_NNN.parquet`).
+    the same key (mirrors why write_bronze names files `<source>_chunk_NNN.csv`).
     """
-    filename = f"anomalies_chunk_{chunk_index:03d}.parquet" if chunk_index is not None else "anomalies.parquet"
+    filename = f"anomalies_chunk_{chunk_index:03d}.csv" if chunk_index is not None else "anomalies.csv"
     return (
         f"quarantine/source={source}/"
         f"etl_run_date={etl_run_date}/"
