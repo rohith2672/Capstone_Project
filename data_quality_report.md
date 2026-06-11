@@ -1,7 +1,7 @@
-# Data Quality Report — Run `b52754c8-3360-4542-a26a-573759171b92`
+# Data Quality Report — Run `afb88ad5-da62-4c38-926a-253a6b339a0a`
 
-- **Run date:** 2026-06-10
-- **Run timestamp:** 2026-06-10T21:22:44.631111+00:00
+- **Run date:** 2026-06-11
+- **Run timestamp:** 2026-06-11T19:10:12.257475+00:00
 - **Status:** SUCCESS
 
 ## Row Counts
@@ -24,10 +24,10 @@
 | silver | weblogs_clean | 8682 |
 | silver | users_clean | 932 |
 | silver | products_clean | 1079 |
-| gold | DIM_USER | 1 |
-| gold | DIM_PRODUCT | 1 |
-| gold | FACT_USER_ACTIVITY | 1 |
-| gold | AGG_SESSION_METRICS | 1 |
+| gold | DIM_USER | 0 |
+| gold | DIM_PRODUCT | 0 |
+| gold | FACT_USER_ACTIVITY | 0 |
+| gold | AGG_SESSION_METRICS | 0 |
 
 ## Quarantine Breakdown
 
@@ -45,10 +45,10 @@
 | weblogs | invalid timestamp | 477 |
 
 **Quarantine object paths:**
-- `users`: `s3://ecommercebucket17/quarantine/source=users/etl_run_date=2026-06-10/etl_run_id=b52754c8-3360-4542-a26a-573759171b92/anomalies.parquet`
-- `products`: `s3://ecommercebucket17/quarantine/source=products/etl_run_date=2026-06-10/etl_run_id=b52754c8-3360-4542-a26a-573759171b92/anomalies.parquet`
-- `weblogs`: `s3://ecommercebucket17/quarantine/source=weblogs/etl_run_date=2026-06-10/etl_run_id=b52754c8-3360-4542-a26a-573759171b92/anomalies_chunk_001.parquet`
-- `weblogs`: `s3://ecommercebucket17/quarantine/source=weblogs/etl_run_date=2026-06-10/etl_run_id=b52754c8-3360-4542-a26a-573759171b92/anomalies_chunk_002.parquet`
+- `users`: `s3://ecommercebucket17/quarantine/source=users/etl_run_date=2026-06-11/etl_run_id=afb88ad5-da62-4c38-926a-253a6b339a0a/anomalies.csv`
+- `products`: `s3://ecommercebucket17/quarantine/source=products/etl_run_date=2026-06-11/etl_run_id=afb88ad5-da62-4c38-926a-253a6b339a0a/anomalies.csv`
+- `weblogs`: `s3://ecommercebucket17/quarantine/source=weblogs/etl_run_date=2026-06-11/etl_run_id=afb88ad5-da62-4c38-926a-253a6b339a0a/anomalies_chunk_001.csv`
+- `weblogs`: `s3://ecommercebucket17/quarantine/source=weblogs/etl_run_date=2026-06-11/etl_run_id=afb88ad5-da62-4c38-926a-253a6b339a0a/anomalies_chunk_002.csv`
 
 ## Data Quality Observations
 
@@ -69,9 +69,9 @@
 
 | Check | Status | Detail |
 |---|---|---|
-| orphan_user_sk_check | RAN | [(0,)] |
-| duplicate_log_id_check | RAN | [] |
-| negative_session_duration_check | RAN | [(0,)] |
+| orphan_user_sk_check | SKIPPED | dry-run / no live Snowflake connection |
+| duplicate_log_id_check | SKIPPED | dry-run / no live Snowflake connection |
+| negative_session_duration_check | SKIPPED | dry-run / no live Snowflake connection |
 
 ## Recommendations
 
