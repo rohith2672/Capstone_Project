@@ -114,11 +114,14 @@ class SnowflakeLoader:
 
     @staticmethod
     def _affected_rows(result) -> int:
+        """See processor._result_row_count: a MERGE/INSERT result is a single row
+        whose values ARE the affected-row counts, so sum them rather than counting
+        rows (which would always be 1)."""
         if isinstance(result, int):
             return result
         try:
-            return len(result)
-        except TypeError:
+            return sum(int(v) for row in result for v in row if v is not None)
+        except (TypeError, ValueError):
             return 0
 
 

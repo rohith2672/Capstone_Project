@@ -58,6 +58,21 @@ def dedupe_keep_first(df: pd.DataFrame, subset: list[str]) -> pd.DataFrame:
     return df.drop_duplicates(subset=subset, keep="first")
 
 
+def dedupe_keep_latest(df: pd.DataFrame, subset: list[str]) -> pd.DataFrame:
+    """Drop duplicate rows on `subset`, silently keeping the LAST (highest-index)
+    occurrence of each key — used where a repeated id is a dedup preference, not a
+    data quality failure (e.g. duplicate user_id/product_id: keep the latest record).
+
+    Rows with a null value in any `subset` column are left untouched (null-id rows
+    are handled separately by the caller's reject-mask logic), since drop_duplicates
+    would otherwise treat multiple NaNs as duplicates of one another.
+    """
+    null_mask = df[subset].isna().any(axis=1)
+    non_null = df.loc[~null_mask]
+    deduped = non_null.sort_index(ascending=False).drop_duplicates(subset=subset, keep="first")
+    return pd.concat([deduped, df.loc[null_mask]]).sort_index()
+
+
 # ---------------------------------------------------------------------------
 # Parsing / categorization
 # ---------------------------------------------------------------------------

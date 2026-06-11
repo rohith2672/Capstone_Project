@@ -38,14 +38,22 @@ SESSION_ID_RE = r"^sess_\d+$"
 
 
 def _result_row_count(result) -> int:
-    """Normalize a SnowflakeLoader.run_sql_file result — a list of fetched rows for
-    SELECT-shaped statements, or a bare rowcount int (NullSnowflakeLoader / DML without
-    a result set) — into a single row count for the audit log."""
+    """Normalize a SnowflakeLoader.run_sql_file result into an affected-row count for
+    the audit log.
+
+    For INSERT/MERGE statements, Snowflake's cursor.fetchall() returns a SINGLE row
+    whose values ARE the counts (e.g. `[(rows_inserted,)]` for INSERT, or
+    `[(rows_inserted, rows_updated)]` for MERGE) — so `len(result)` is always 1
+    regardless of how many rows were actually written. Sum the numeric values in
+    that row instead. Falls back to 0 for empty/non-numeric results (e.g.
+    NullSnowflakeLoader's `[]`), or the bare int as-is if a rowcount was returned
+    directly.
+    """
     if isinstance(result, int):
         return result
     try:
-        return len(result)
-    except TypeError:
+        return sum(int(v) for row in result for v in row if v is not None)
+    except (TypeError, ValueError):
         return 0
 
 
@@ -156,48 +164,51 @@ class WebLogProcessor:
         )
 
     def _validate_users(self, chunk: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+        # Duplicate user_id is a dedup preference, not a rejection: keep the latest
+        # occurrence and silently drop earlier ones before computing reject reasons.
+        chunk = helpers.dedupe_keep_latest(chunk, subset=["user_id"])
+
         null_user_id = chunk["user_id"].isna()
-        dup_user_id = helpers.find_duplicates(chunk["user_id"])
-        invalid_email = ~helpers.is_valid_email(chunk["email"])
         invalid_signup_date = helpers.parse_timestamp(chunk["signup_date"]).isna()
 
-        reject_mask = null_user_id | dup_user_id | invalid_email | invalid_signup_date
+        reject_mask = null_user_id | invalid_signup_date
         reasons = pd.Series(
             np.select(
-                [null_user_id, dup_user_id, invalid_email, invalid_signup_date],
-                ["null user_id", "duplicate user_id", "invalid email", "invalid signup_date"],
+                [null_user_id, invalid_signup_date],
+                ["null user_id", "invalid signup_date"],
                 default=None,
             ),
             index=chunk.index,
         )
 
-        self.metrics.set_quality_observations(
-            {"users.null_user_name_rate": float(chunk["user_name"].isna().mean())}
-        )
-
         clean = chunk.loc[~reject_mask].copy()
+        clean["is_duplicate_email"] = helpers.find_duplicates(clean["email"])
+        clean["is_invalid_email"] = ~helpers.is_valid_email(clean["email"])
+        clean["user_name"] = clean["user_name"].fillna("unknown")
+
         quarantine = self._quarantine_frame(chunk, reject_mask, reasons, self.users_file)
         return clean, quarantine
 
     def _validate_products(self, chunk: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-        null_product_id = chunk["product_id"].isna()
-        dup_product_id = helpers.find_duplicates(chunk["product_id"])
+        # Duplicate product_id is a dedup preference, not a rejection: keep the latest
+        # occurrence and silently drop earlier ones before computing reject reasons.
+        chunk = helpers.dedupe_keep_latest(chunk, subset=["product_id"])
 
-        reject_mask = null_product_id | dup_product_id
+        null_product_id = chunk["product_id"].isna()
+
+        reject_mask = null_product_id
         reasons = pd.Series(
             np.select(
-                [null_product_id, dup_product_id],
-                ["null product_id", "duplicate product_id"],
+                [null_product_id],
+                ["null product_id"],
                 default=None,
             ),
             index=chunk.index,
         )
 
-        self.metrics.set_quality_observations(
-            {"products.null_price_rate": float(chunk["price"].isna().mean())}
-        )
-
         clean = chunk.loc[~reject_mask].copy()
+        clean["price"] = clean["price"].fillna(0)
+
         quarantine = self._quarantine_frame(chunk, reject_mask, reasons, self.products_file)
         return clean, quarantine
 
