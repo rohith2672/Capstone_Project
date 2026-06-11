@@ -50,22 +50,6 @@ def _result_row_count(result) -> int:
 
 
 class WebLogProcessor:
-    # layer -> ((bronze/silver dataset name, fully-qualified Snowflake mirror table), ...)
-    # Gold is intentionally absent — its tables are derived in-warehouse from STAGING
-    # (see build_gold), never COPY INTO'd from an S3 stage.
-    _MIRROR_TABLES = {
-        "bronze": (
-            ("weblogs", "RAW.BRONZE_WEBLOGS"),
-            ("users", "RAW.BRONZE_USERS"),
-            ("products", "RAW.BRONZE_PRODUCTS"),
-        ),
-        "silver": (
-            ("weblogs_clean", "STAGING.WEBLOGS_CLEAN"),
-            ("users_clean", "STAGING.USERS_CLEAN"),
-            ("products_clean", "STAGING.PRODUCTS_CLEAN"),
-        ),
-    }
-
     # (report label, sql/validation/<filename>) — see spec Phase 6 "Post-Load Checks"
     _VALIDATION_QUERIES = (
         ("orphan_user_sk_check", "orphan_user_sk_check.sql"),
@@ -267,9 +251,9 @@ class WebLogProcessor:
         """Write clean rows to bronze/<source>/ingest_date=<run_date>/ as Parquet."""
         if clean_chunk.empty:
             return
-        filename = f"{source}_chunk_{chunk_index:03d}.parquet" if chunk_index is not None else f"{source}.parquet"
+        filename = f"{source}_chunk_{chunk_index:03d}.csv" if chunk_index is not None else f"{source}.csv"
         key = make_key("bronze", source, {"ingest_date": self.etl_run_date}, filename)
-        self.storage.write_parquet(clean_chunk, key)
+        self.storage.write_csv(clean_chunk, key)
         self.metrics.record_loaded("bronze", source, len(clean_chunk))
         self.logger.info("bronze.write", extra={"source": source, "rows": len(clean_chunk), "key": key})
 
@@ -283,7 +267,7 @@ class WebLogProcessor:
         if quarantine_chunk.empty:
             return
         key = helpers.quarantine_path(source, self.etl_run_date, self.etl_run_id, chunk_index=chunk_index)
-        path = self.storage.write_parquet(quarantine_chunk, key)
+        path = self.storage.write_csv(quarantine_chunk, key)
         self.metrics.record_quarantined(source, len(quarantine_chunk), quarantine_chunk["rejection_reason"])
         self.metrics.record_quarantine_path(source, path)
         self.logger.warning(
@@ -307,7 +291,7 @@ class WebLogProcessor:
         the spec's DDL places that table (ANALYTICS schema). See README Assumptions.
         """
         prefix = make_key("bronze", "weblogs", {"ingest_date": self.etl_run_date}, "").rstrip("/")
-        weblogs = self.storage.read_parquet_prefix(prefix)
+        weblogs = self.storage.read_csv_prefix(prefix)
 
         weblogs = weblogs.copy()
         weblogs["action_ts"] = helpers.parse_timestamp(weblogs["timestamp"])
@@ -342,11 +326,11 @@ class WebLogProcessor:
         """Join transformed weblogs with cleaned users/products (spec: 'Merge logs
         with users and products for enrichment'). Re-reads Bronze users/products via
         storage for the same independent-re-runnability reason as transform()."""
-        users = self.storage.read_parquet(
-            make_key("bronze", "users", {"ingest_date": self.etl_run_date}, "users.parquet")
+        users = self.storage.read_csv(
+            make_key("bronze", "users", {"ingest_date": self.etl_run_date}, "users.csv")
         )
-        products = self.storage.read_parquet(
-            make_key("bronze", "products", {"ingest_date": self.etl_run_date}, "products.parquet")
+        products = self.storage.read_csv(
+            make_key("bronze", "products", {"ingest_date": self.etl_run_date}, "products.csv")
         )
 
         self._silver_weblogs = (
@@ -371,44 +355,19 @@ class WebLogProcessor:
             return
         if dataset == "weblogs_clean":
             partitions = {"etl_run_date": self.etl_run_date, "etl_run_id": self.etl_run_id}
-            filename = "weblogs_silver.parquet"
+            filename = "weblogs_silver.csv"
         elif dataset in ("users_clean", "products_clean"):
             partitions = {"etl_run_date": self.etl_run_date}
-            filename = f"{dataset.split('_')[0]}_silver.parquet"
+            filename = f"{dataset.split('_')[0]}_silver.csv"
         else:
             raise ValueError(f"Unknown silver dataset: {dataset!r}")
 
         key = make_key("silver", dataset, partitions, filename)
-        self.storage.write_parquet(df, key)
+        self.storage.write_csv(df, key)
         self.metrics.record_loaded("silver", dataset, len(df))
         self.logger.info("silver.write", extra={"dataset": dataset, "rows": len(df), "key": key})
 
     # ── Gold Phase ────────────────────────────────────────────────────
-    def load_to_snowflake(self, layer: str) -> int:
-        """COPY INTO Snowflake's RAW/STAGING mirror tables from the matching named
-        S3 stage (spec: '<layer>_stage' over s3://<bucket>/<layer>/). Gold is NOT
-        loaded this way — see build_gold(), which derives Gold tables in-warehouse
-        from STAGING via MERGE/INSERT, with no S3 stage involved.
-
-        Deliberately NOT recorded into RunMetrics.loaded: write_bronze/write_silver
-        already record rows persisted to each layer's S3/lake store, which is what
-        the audit log's per-layer rows_loaded figure represents (see README
-        Assumptions) — recording the Snowflake mirror-load count too would double it.
-        """
-        if layer not in self._MIRROR_TABLES:
-            raise ValueError(f"load_to_snowflake: unsupported layer {layer!r} (use 'bronze' or 'silver')")
-
-        stage = f"{layer}_stage"
-        total = 0
-        for dataset, table in self._MIRROR_TABLES[layer]:
-            n = self.snowflake_loader.copy_into(stage=f"{stage}/{dataset}/", table=table)
-            total += n
-            self.logger.info(
-                "load_to_snowflake.copy_into",
-                extra={"layer": layer, "dataset": dataset, "table": table, "rows_loaded": n},
-            )
-        return total
-
     def build_gold(self) -> None:
         """Run Gold-layer SQL in Snowflake (spec Phase 4): idempotent dimension
         upserts (MERGE INTO DIM_USER/DIM_PRODUCT — see sql/dml/merge_dim_*.sql), then
@@ -494,9 +453,6 @@ class WebLogProcessor:
             self.write_silver(self._users_clean, dataset="users_clean")
             self.write_silver(self._products_clean, dataset="products_clean")
 
-            if self.settings.storage_backend == "s3":
-                self.load_to_snowflake("bronze")
-                self.load_to_snowflake("silver")
             self.build_gold()
 
             self.metrics.set_validation_results(self.run_validations())

@@ -35,10 +35,10 @@ def make_key(layer: str, dataset: str, partitions: dict[str, str], filename: str
 class StorageBackend(Protocol):
     """Minimal interface WebLogProcessor needs from a Bronze/Silver/Quarantine store."""
 
-    def write_parquet(self, df: pd.DataFrame, key: str) -> str:
+    def write_csv(self, df: pd.DataFrame, key: str) -> str:
         ...
 
-    def read_parquet(self, key: str) -> pd.DataFrame:
+    def read_csv(self, key: str) -> pd.DataFrame:
         ...
 
     def exists(self, key: str) -> bool:
@@ -47,12 +47,12 @@ class StorageBackend(Protocol):
     def list(self, prefix: str) -> list[str]:
         ...
 
-    def read_parquet_prefix(self, prefix: str) -> pd.DataFrame:
+    def read_csv_prefix(self, prefix: str) -> pd.DataFrame:
         ...
 
 
 class LocalFSBackend:
-    """Writes/reads Parquet under <root_dir>/<key>, using the key string verbatim as
+    """Writes/reads CSV under <root_dir>/<key>, using the key string verbatim as
     a relative path. Default backend — used by --dry-run, the sample run, and tests.
     """
 
@@ -62,14 +62,14 @@ class LocalFSBackend:
     def _path(self, key: str) -> str:
         return os.path.join(self.root_dir, *key.split("/"))
 
-    def write_parquet(self, df: pd.DataFrame, key: str) -> str:
+    def write_csv(self, df: pd.DataFrame, key: str) -> str:
         path = self._path(key)
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        df.to_parquet(path, index=False)
+        df.to_csv(path, index=False)
         return path
 
-    def read_parquet(self, key: str) -> pd.DataFrame:
-        return pd.read_parquet(self._path(key))
+    def read_csv(self, key: str) -> pd.DataFrame:
+        return pd.read_csv(self._path(key))
 
     def exists(self, key: str) -> bool:
         return os.path.exists(self._path(key))
@@ -86,11 +86,11 @@ class LocalFSBackend:
                 keys.append(rel)
         return sorted(keys)
 
-    def read_parquet_prefix(self, prefix: str) -> pd.DataFrame:
-        keys = [k for k in self.list(prefix) if k.endswith(".parquet")]
+    def read_csv_prefix(self, prefix: str) -> pd.DataFrame:
+        keys = [k for k in self.list(prefix) if k.endswith(".csv")]
         if not keys:
             return pd.DataFrame()
-        return pd.concat([self.read_parquet(k) for k in keys], ignore_index=True)
+        return pd.concat([self.read_csv(k) for k in keys], ignore_index=True)
 
 
 class S3Backend:
@@ -115,18 +115,18 @@ class S3Backend:
         self.client = client
         self.transfer_config = transfer_config
 
-    def write_parquet(self, df: pd.DataFrame, key: str) -> str:
+    def write_csv(self, df: pd.DataFrame, key: str) -> str:
         buffer = io.BytesIO()
-        df.to_parquet(buffer, index=False)
+        df.to_csv(buffer, index=False)
         buffer.seek(0)
         self.client.upload_fileobj(buffer, self.bucket, key, Config=self.transfer_config)
         return f"s3://{self.bucket}/{key}"
 
-    def read_parquet(self, key: str) -> pd.DataFrame:
+    def read_csv(self, key: str) -> pd.DataFrame:
         buffer = io.BytesIO()
         self.client.download_fileobj(self.bucket, key, buffer, Config=self.transfer_config)
         buffer.seek(0)
-        return pd.read_parquet(buffer)
+        return pd.read_csv(buffer)
 
     def exists(self, key: str) -> bool:
         from botocore.exceptions import ClientError
@@ -144,11 +144,11 @@ class S3Backend:
                 keys.append(obj["Key"])
         return sorted(keys)
 
-    def read_parquet_prefix(self, prefix: str) -> pd.DataFrame:
-        keys = [k for k in self.list(prefix) if k.endswith(".parquet")]
+    def read_csv_prefix(self, prefix: str) -> pd.DataFrame:
+        keys = [k for k in self.list(prefix) if k.endswith(".csv")]
         if not keys:
             return pd.DataFrame()
-        return pd.concat([self.read_parquet(k) for k in keys], ignore_index=True)
+        return pd.concat([self.read_csv(k) for k in keys], ignore_index=True)
 
 
 def get_storage_backend(settings: Settings) -> StorageBackend:
@@ -164,5 +164,5 @@ def get_storage_backend(settings: Settings) -> StorageBackend:
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
         )
-        return S3Backend(bucket=settings.s3_bucket, client=client)
+        return S3Backend(bucket=settings.s3_bucket_name, client=client)
     return LocalFSBackend(root_dir=settings.local_lake_root)

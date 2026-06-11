@@ -33,7 +33,8 @@ CREATE OR REPLACE TABLE ANALYTICS.FACT_USER_ACTIVITY (
     etl_run_id     VARCHAR(36),
     etl_run_date   DATE
 )
-CLUSTER BY (etl_run_date, action);   -- Snowflake micro-partition clustering
+CLUSTER BY (etl_run_date, action);
+-- Snowflake micro-partition clustering
 
 -- Aggregate: Session Metrics
 CREATE OR REPLACE TABLE ANALYTICS.AGG_SESSION_METRICS (

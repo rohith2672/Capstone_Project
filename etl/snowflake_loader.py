@@ -106,35 +106,6 @@ class SnowflakeLoader:
         return results[-1] if results else []
 
     # ------------------------------------------------------------------
-    def copy_into(self, *, stage: str, table: str, pattern: str | None = None) -> int:
-        """Run COPY INTO <table> FROM @<stage> [PATTERN => '<pattern>'] and return the
-        number of rows loaded (parsed from Snowflake's COPY INTO result rows).
-        """
-        sql = f"COPY INTO {table}\nFROM @{stage}\nFILE_FORMAT = (TYPE = PARQUET)\nMATCH_BY_COLUMN_NAME = CASE_INSENSITIVE\nON_ERROR = CONTINUE"
-        if pattern:
-            sql += f"\nPATTERN = '{pattern}'"
-        sql += ";"
-
-        rows = self.execute(sql)
-        return self._sum_rows_loaded(rows)
-
-    @staticmethod
-    def _sum_rows_loaded(copy_result_rows) -> int:
-        """COPY INTO returns one result row per file with a 'rows_loaded' column
-        (3rd column in the standard result set). Sum across files; tolerate mocks
-        that return plain ints for simplicity in tests.
-        """
-        if isinstance(copy_result_rows, int):
-            return copy_result_rows
-        total = 0
-        for row in copy_result_rows or []:
-            try:
-                total += int(row[3])  # rows_loaded column in COPY INTO result
-            except (IndexError, TypeError, ValueError):
-                continue
-        return total
-
-    # ------------------------------------------------------------------
     def merge_dim_user(self, sql_path: str | Path) -> int:
         return self._affected_rows(self.run_sql_file(sql_path))
 
@@ -184,15 +155,6 @@ class NullSnowflakeLoader:
     def run_sql_file(self, path, params=None):
         logger.info("[DRY RUN] would run SQL file", extra={"path": str(path)})
         return []
-
-    def copy_into(self, *, stage: str, table: str, pattern: str | None = None) -> int:
-        logger.info(
-            "[DRY RUN] would COPY INTO %s FROM @%s",
-            table,
-            stage,
-            extra={"stage": stage, "table": table, "pattern": pattern},
-        )
-        return 0
 
     def merge_dim_user(self, sql_path) -> int:
         logger.info("[DRY RUN] would MERGE INTO DIM_USER", extra={"sql_path": str(sql_path)})

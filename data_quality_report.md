@@ -1,7 +1,7 @@
-# Data Quality Report — Run `8c11a28f-a782-49a5-846d-7e984191a971`
+# Data Quality Report — Run `b52754c8-3360-4542-a26a-573759171b92`
 
-- **Run date:** 2026-06-07
-- **Run timestamp:** 2026-06-07T20:17:22.941998+00:00
+- **Run date:** 2026-06-10
+- **Run timestamp:** 2026-06-10T21:22:44.631111+00:00
 - **Status:** SUCCESS
 
 ## Row Counts
@@ -24,10 +24,10 @@
 | silver | weblogs_clean | 8682 |
 | silver | users_clean | 932 |
 | silver | products_clean | 1079 |
-| gold | DIM_USER | 0 |
-| gold | DIM_PRODUCT | 0 |
-| gold | FACT_USER_ACTIVITY | 0 |
-| gold | AGG_SESSION_METRICS | 0 |
+| gold | DIM_USER | 1 |
+| gold | DIM_PRODUCT | 1 |
+| gold | FACT_USER_ACTIVITY | 1 |
+| gold | AGG_SESSION_METRICS | 1 |
 
 ## Quarantine Breakdown
 
@@ -40,16 +40,15 @@
 | weblogs | orphan user_id | 3093 |
 | weblogs | orphan product_id | 1044 |
 | weblogs | null user_id | 738 |
-| weblogs | duplicate log_id | 483 |
 | weblogs | invalid session_id | 483 |
+| weblogs | duplicate log_id | 483 |
 | weblogs | invalid timestamp | 477 |
 
 **Quarantine object paths:**
-- `users`: `data/lake\quarantine\source=users\etl_run_date=2026-06-07\etl_run_id=8c11a28f-a782-49a5-846d-7e984191a971\anomalies.parquet`
-- `products`: `data/lake\quarantine\source=products\etl_run_date=2026-06-07\etl_run_id=8c11a28f-a782-49a5-846d-7e984191a971\anomalies.parquet`
-- `weblogs`: `data/lake\quarantine\source=weblogs\etl_run_date=2026-06-07\etl_run_id=8c11a28f-a782-49a5-846d-7e984191a971\anomalies_chunk_001.parquet`
-- `weblogs`: `data/lake\quarantine\source=weblogs\etl_run_date=2026-06-07\etl_run_id=8c11a28f-a782-49a5-846d-7e984191a971\anomalies_chunk_002.parquet`
-- `weblogs`: `data/lake\quarantine\source=weblogs\etl_run_date=2026-06-07\etl_run_id=8c11a28f-a782-49a5-846d-7e984191a971\anomalies_chunk_003.parquet`
+- `users`: `s3://ecommercebucket17/quarantine/source=users/etl_run_date=2026-06-10/etl_run_id=b52754c8-3360-4542-a26a-573759171b92/anomalies.parquet`
+- `products`: `s3://ecommercebucket17/quarantine/source=products/etl_run_date=2026-06-10/etl_run_id=b52754c8-3360-4542-a26a-573759171b92/anomalies.parquet`
+- `weblogs`: `s3://ecommercebucket17/quarantine/source=weblogs/etl_run_date=2026-06-10/etl_run_id=b52754c8-3360-4542-a26a-573759171b92/anomalies_chunk_001.parquet`
+- `weblogs`: `s3://ecommercebucket17/quarantine/source=weblogs/etl_run_date=2026-06-10/etl_run_id=b52754c8-3360-4542-a26a-573759171b92/anomalies_chunk_002.parquet`
 
 ## Data Quality Observations
 
@@ -70,9 +69,9 @@
 
 | Check | Status | Detail |
 |---|---|---|
-| orphan_user_sk_check | SKIPPED | dry-run / no live Snowflake connection |
-| duplicate_log_id_check | SKIPPED | dry-run / no live Snowflake connection |
-| negative_session_duration_check | SKIPPED | dry-run / no live Snowflake connection |
+| orphan_user_sk_check | RAN | [(0,)] |
+| duplicate_log_id_check | RAN | [] |
+| negative_session_duration_check | RAN | [(0,)] |
 
 ## Recommendations
 

@@ -83,30 +83,30 @@ def test_run_end_to_end_against_real_sample_data(dry_run_processor, tmp_path):
 
     # ---- Bronze: clean rows actually persisted to the lake ---------------
     ingest_prefix = make_key("bronze", "weblogs", {"ingest_date": proc.etl_run_date}, "").rstrip("/")
-    bronze_weblogs = proc.storage.read_parquet_prefix(ingest_prefix)
+    bronze_weblogs = proc.storage.read_csv_prefix(ingest_prefix)
     assert len(bronze_weblogs) == metrics.loaded["bronze"]["weblogs"]
     assert len(bronze_weblogs) == len(set(bronze_weblogs["log_id"]))  # no dup log_ids survived
 
-    bronze_users = proc.storage.read_parquet(
-        make_key("bronze", "users", {"ingest_date": proc.etl_run_date}, "users.parquet")
+    bronze_users = proc.storage.read_csv(
+        make_key("bronze", "users", {"ingest_date": proc.etl_run_date}, "users.csv")
     )
-    bronze_products = proc.storage.read_parquet(
-        make_key("bronze", "products", {"ingest_date": proc.etl_run_date}, "products.parquet")
+    bronze_products = proc.storage.read_csv(
+        make_key("bronze", "products", {"ingest_date": proc.etl_run_date}, "products.csv")
     )
     assert set(bronze_weblogs["user_id"].astype(int)) <= set(bronze_users["user_id"].astype(int))
     assert set(bronze_weblogs["product_id"].astype(int)) <= set(bronze_products["product_id"].astype(int))
 
     # ---- Quarantine: rejects persisted with the 7-column spec schema -----
-    quarantine_weblogs = proc.storage.read_parquet_prefix(f"quarantine/source=weblogs/etl_run_date={proc.etl_run_date}/etl_run_id={proc.etl_run_id}")
+    quarantine_weblogs = proc.storage.read_csv_prefix(f"quarantine/source=weblogs/etl_run_date={proc.etl_run_date}/etl_run_id={proc.etl_run_id}")
     assert len(quarantine_weblogs) == metrics.quarantined["weblogs"]
     assert set(quarantine_weblogs.columns) == set(helpers.QUARANTINE_COLUMNS)
 
     # ---- Silver: transformed/enriched output persisted -------------------
-    silver_weblogs = proc.storage.read_parquet(
+    silver_weblogs = proc.storage.read_csv(
         make_key(
             "silver", "weblogs_clean",
             {"etl_run_date": proc.etl_run_date, "etl_run_id": proc.etl_run_id},
-            "weblogs_silver.parquet",
+            "weblogs_silver.csv",
         )
     )
     assert len(silver_weblogs) == metrics.loaded["silver"]["weblogs_clean"]
@@ -121,11 +121,11 @@ def test_run_end_to_end_against_real_sample_data(dry_run_processor, tmp_path):
     for col in ("user_name", "email", "product_name", "category", "price"):
         assert col in silver_weblogs.columns
 
-    silver_users = proc.storage.read_parquet(
-        make_key("silver", "users_clean", {"etl_run_date": proc.etl_run_date}, "users_silver.parquet")
+    silver_users = proc.storage.read_csv(
+        make_key("silver", "users_clean", {"etl_run_date": proc.etl_run_date}, "users_silver.csv")
     )
-    silver_products = proc.storage.read_parquet(
-        make_key("silver", "products_clean", {"etl_run_date": proc.etl_run_date}, "products_silver.parquet")
+    silver_products = proc.storage.read_csv(
+        make_key("silver", "products_clean", {"etl_run_date": proc.etl_run_date}, "products_silver.csv")
     )
     assert len(silver_users) == metrics.loaded["silver"]["users_clean"]
     assert len(silver_products) == metrics.loaded["silver"]["products_clean"]

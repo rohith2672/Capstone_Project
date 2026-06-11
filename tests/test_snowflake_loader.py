@@ -71,26 +71,6 @@ def test_executemany_invokes_cursor_executemany():
 
 
 # ---------------------------------------------------------------------------
-# copy_into — builds expected COPY INTO SQL and sums rows_loaded
-# ---------------------------------------------------------------------------
-def test_copy_into_builds_expected_sql_and_sums_rows_loaded():
-    loader, _, _, mock_cursor = _loader_with_mock_connection()
-    # COPY INTO result rows: (file, status, rows_parsed, rows_loaded, ...)
-    mock_cursor.fetchall.return_value = [
-        ("f1.parquet", "LOADED", 100, 100),
-        ("f2.parquet", "LOADED", 50, 48),
-    ]
-
-    n = loader.copy_into(stage="bronze_stage", table="RAW.BRONZE_WEBLOGS", pattern=".*weblogs.*")
-
-    executed_sql = mock_cursor.execute.call_args[0][0]
-    assert "COPY INTO RAW.BRONZE_WEBLOGS" in executed_sql
-    assert "FROM @bronze_stage" in executed_sql
-    assert "PATTERN = '.*weblogs.*'" in executed_sql
-    assert n == 148
-
-
-# ---------------------------------------------------------------------------
 # run_sql_file — splits and executes statements, returns last result
 # ---------------------------------------------------------------------------
 def test_run_sql_file_executes_each_statement_in_order(tmp_path):
@@ -112,7 +92,6 @@ def test_run_sql_file_executes_each_statement_in_order(tmp_path):
 def test_null_loader_returns_deterministic_synthetic_results():
     loader = NullSnowflakeLoader({"account": "x"})
     assert loader.execute("SELECT 1") == []
-    assert loader.copy_into(stage="bronze_stage", table="RAW.BRONZE_WEBLOGS") == 0
     assert loader.executemany("INSERT ...", [{"a": 1}, {"a": 2}]) == 2
     assert loader.merge_dim_user("sql/dml/merge_dim_user.sql") == 0
     # context manager protocol works without raising

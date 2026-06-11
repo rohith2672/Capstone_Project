@@ -28,7 +28,16 @@ SELECT
         AND SUM(IFF(w.action = 'purchase', 1, 0)) = 0)              AS is_abandoned_cart,
     (COUNT(*) > 50)                                                 AS is_high_activity,
     w.etl_run_date
-FROM STAGING.WEBLOGS_CLEAN AS w
+FROM (
+    SELECT
+        $2::string AS user_id,
+        $4::string AS session_id,
+        $5::string AS action,
+        $7::timestamp AS action_ts,
+        $9::date AS etl_run_date
+    FROM @ANALYTICS.silver_stage/weblogs_clean/
+    (FILE_FORMAT => 'ANALYTICS.csv_format', PATTERN => '.*\\.csv')
+) AS w
 JOIN ANALYTICS.DIM_USER AS u ON w.user_id = u.user_id
 WHERE NOT EXISTS (
     SELECT 1 FROM ANALYTICS.AGG_SESSION_METRICS AS a WHERE a.session_id = w.session_id

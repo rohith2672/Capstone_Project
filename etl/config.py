@@ -16,7 +16,8 @@ class Settings:
     storage_backend: str = "local"
     local_lake_root: str = "data/lake"
 
-    s3_bucket: str = ""
+    s3_bucket_name: str = "weatherdatastore78"
+    s3_processed_prefix: str = "processed/weather"
     aws_region: str = "us-east-1"
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
@@ -25,8 +26,10 @@ class Settings:
     snowflake_user: str = ""
     snowflake_password: str = ""
     snowflake_role: str = ""
-    snowflake_warehouse: str = ""
-    snowflake_database: str = "ECOMMERCE_DW"
+    snowflake_warehouse: str = "COMPUTE_WH"
+    snowflake_database: str = "WEATHER_DB"
+    snowflake_schema: str = "PUBLIC"
+    snowflake_table: str = "weather_data"
 
     chunk_size: int = 10000
     weblog_file: str = "data/raw/weblogs.csv"
@@ -41,7 +44,7 @@ class Settings:
         missing = [
             name
             for name, value in (
-                ("S3_BUCKET", self.s3_bucket),
+                ("S3_BUCKET_NAME", self.s3_bucket_name),
                 ("AWS_ACCESS_KEY_ID", self.aws_access_key_id),
                 ("AWS_SECRET_ACCESS_KEY", self.aws_secret_access_key),
             )
@@ -64,6 +67,7 @@ class Settings:
             "password": self.snowflake_password,
             "warehouse": self.snowflake_warehouse,
             "database": self.snowflake_database,
+            "schema": self.snowflake_schema,
         }
         if self.snowflake_role:
             params["role"] = self.snowflake_role
@@ -94,7 +98,8 @@ def load_settings(env_path: str | None = None, *, dry_run: bool | None = None) -
     settings = Settings(
         storage_backend=os.environ.get("STORAGE_BACKEND", "local").strip().lower(),
         local_lake_root=os.environ.get("LOCAL_LAKE_ROOT", "data/lake"),
-        s3_bucket=os.environ.get("S3_BUCKET", ""),
+        s3_bucket_name=os.environ.get("S3_BUCKET_NAME", "weatherdatastore78"),
+        s3_processed_prefix=os.environ.get("S3_PROCESSED_PREFIX", "processed/weather"),
         aws_region=os.environ.get("AWS_REGION", "us-east-1"),
         aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID", ""),
         aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
@@ -102,8 +107,10 @@ def load_settings(env_path: str | None = None, *, dry_run: bool | None = None) -
         snowflake_user=os.environ.get("SNOWFLAKE_USER", ""),
         snowflake_password=os.environ.get("SNOWFLAKE_PASSWORD", ""),
         snowflake_role=os.environ.get("SNOWFLAKE_ROLE", ""),
-        snowflake_warehouse=os.environ.get("SNOWFLAKE_WAREHOUSE", ""),
-        snowflake_database=os.environ.get("SNOWFLAKE_DATABASE", "ECOMMERCE_DW"),
+        snowflake_warehouse=os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
+        snowflake_database=os.environ.get("SNOWFLAKE_DATABASE", "WEATHER_DB"),
+        snowflake_schema=os.environ.get("SNOWFLAKE_SCHEMA", "PUBLIC"),
+        snowflake_table=os.environ.get("SNOWFLAKE_TABLE", "weather_data"),
         chunk_size=_env_int("CHUNK_SIZE", 10000),
         weblog_file=os.environ.get("WEBLOG_FILE", "data/raw/weblogs.csv"),
         users_file=os.environ.get("USERS_FILE", "data/raw/users.csv"),

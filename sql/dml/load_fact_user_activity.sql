@@ -14,7 +14,19 @@ SELECT
     w.action_ts,
     w.etl_run_id,
     w.etl_run_date
-FROM STAGING.WEBLOGS_CLEAN AS w
+FROM (
+    SELECT
+        $1::string AS log_id,
+        $2::string AS user_id,
+        $3::string AS product_id,
+        $4::string AS session_id,
+        $5::string AS action,
+        $7::timestamp AS action_ts,
+        $8::string AS etl_run_id,
+        $9::date AS etl_run_date
+    FROM @ANALYTICS.silver_stage/weblogs_clean/
+    (FILE_FORMAT => 'ANALYTICS.csv_format', PATTERN => '.*\\.csv')
+) AS w
 LEFT JOIN ANALYTICS.DIM_USER AS u ON w.user_id = u.user_id
 LEFT JOIN ANALYTICS.DIM_PRODUCT AS p ON w.product_id = p.product_id
 WHERE NOT EXISTS (
