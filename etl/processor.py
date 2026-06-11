@@ -55,6 +55,7 @@ class WebLogProcessor:
         ("orphan_user_sk_check", "orphan_user_sk_check.sql"),
         ("duplicate_log_id_check", "duplicate_log_id_check.sql"),
         ("negative_session_duration_check", "negative_session_duration_check.sql"),
+        ("null_sk_check", "null_sk_check.sql"),
     )
 
     def __init__(
@@ -385,6 +386,14 @@ class WebLogProcessor:
 
         n_agg = _result_row_count(self.snowflake_loader.run_sql_file(sql_dir / "build_agg_session_metrics.sql"))
         self.metrics.record_loaded("gold", "AGG_SESSION_METRICS", n_agg)
+
+        null_sk_result = self.snowflake_loader.run_sql_file(
+            Path(self.settings.sql_dir) / "validation" / "null_sk_check.sql"
+        )
+        null_sk_count = sum(v or 0 for row in null_sk_result for v in row)
+        if null_sk_count:
+            self.logger.warning("build_gold.null_sk_detected", extra={"null_sk_count": null_sk_count})
+        self.metrics.record_session_anomaly("null_sk_in_fact", null_sk_count)
 
         self.logger.info(
             "build_gold.complete",

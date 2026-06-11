@@ -39,7 +39,8 @@ FROM (
     (FILE_FORMAT => 'ANALYTICS.csv_format', PATTERN => '.*\\.csv')
 ) AS w
 JOIN ANALYTICS.DIM_USER AS u ON w.user_id = u.user_id
-WHERE NOT EXISTS (
+WHERE u.user_sk IS NOT NULL
+  AND NOT EXISTS (
     SELECT 1 FROM ANALYTICS.AGG_SESSION_METRICS AS a WHERE a.session_id = w.session_id
 )
 GROUP BY w.session_id, u.user_sk, w.etl_run_date;

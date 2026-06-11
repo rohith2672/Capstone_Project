@@ -3,6 +3,8 @@
 -- AS SELECT" — written here as an idempotent INSERT...SELECT so re-runs on the same
 -- day don't duplicate rows; log_id is the natural key for the NOT EXISTS guard).
 -- Run AFTER merge_dim_user.sql / merge_dim_product.sql so surrogate keys exist.
+-- INNER JOINs (not LEFT JOIN): a weblog row whose user_id/product_id has no matching
+-- DIM_USER/DIM_PRODUCT row is excluded rather than inserted with a null user_sk/product_sk.
 INSERT INTO ANALYTICS.FACT_USER_ACTIVITY
     (log_id, user_sk, product_sk, session_id, action, action_ts, etl_run_id, etl_run_date)
 SELECT
@@ -27,8 +29,8 @@ FROM (
     FROM @ANALYTICS.silver_stage/weblogs_clean/
     (FILE_FORMAT => 'ANALYTICS.csv_format', PATTERN => '.*\\.csv')
 ) AS w
-LEFT JOIN ANALYTICS.DIM_USER AS u ON w.user_id = u.user_id
-LEFT JOIN ANALYTICS.DIM_PRODUCT AS p ON w.product_id = p.product_id
+JOIN ANALYTICS.DIM_USER AS u ON w.user_id = u.user_id
+JOIN ANALYTICS.DIM_PRODUCT AS p ON w.product_id = p.product_id
 WHERE NOT EXISTS (
     SELECT 1 FROM ANALYTICS.FACT_USER_ACTIVITY AS f WHERE f.log_id = w.log_id
 );
