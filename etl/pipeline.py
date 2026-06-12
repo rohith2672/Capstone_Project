@@ -82,11 +82,16 @@ class WebLogPipeline:
         # Sort out-of-order logs
         weblogs['timestamp'] = pd.to_datetime(weblogs['timestamp'])
         weblogs = weblogs.sort_values(by=['session_id', 'timestamp'])
-        
+        weblogs = weblogs.rename(columns={'timestamp': 'action_ts'})
+
+        # Stamp rows with the current ETL run so Gold-layer SQL can join/group by run
+        weblogs['etl_run_id'] = self.etl_run_id
+        weblogs['etl_run_date'] = self.etl_run_date
+
         # Calculate session metrics (for aggregations)
         session_metrics = weblogs.groupby('session_id').agg(
-            session_start=('timestamp', 'min'),
-            session_end=('timestamp', 'max'),
+            session_start=('action_ts', 'min'),
+            session_end=('action_ts', 'max'),
             total_actions=('action', 'count'),
             total_views=('action', lambda x: (x == 'view').sum()),
             total_cart_adds=('action', lambda x: (x == 'add_to_cart').sum()),

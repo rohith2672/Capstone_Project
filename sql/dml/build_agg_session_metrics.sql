@@ -7,6 +7,9 @@
 -- why this is computed in SQL here rather than COPY INTO'd from the Python DataFrame
 -- (user_sk is a Snowflake-side surrogate key that doesn't exist until merge_dim_user
 -- has run, so it can only be resolved with a live join).
+-- Reads from STAGING.WEBLOGS_CLEAN (loaded via COPY INTO ... MATCH_BY_COLUMN_NAME from
+-- Silver Parquet) rather than re-parsing raw stage files, so action_ts is a properly
+-- typed TIMESTAMP_NTZ and MIN/MAX produce real session start/end values.
 -- Idempotent: re-runs skip session_ids already present.
 INSERT INTO ANALYTICS.AGG_SESSION_METRICS
     (session_id, user_sk, session_start, session_end, session_duration_s,
@@ -26,20 +29,11 @@ SELECT
         / NULLIF(SUM(IFF(w.action = 'view', 1, 0)), 0)              AS conversion_rate,
     (SUM(IFF(w.action = 'add_to_cart', 1, 0)) > 0
         AND SUM(IFF(w.action = 'purchase', 1, 0)) = 0)              AS is_abandoned_cart,
-    (COUNT(*) > 50)                                                 AS is_high_activity,
-    w.etl_run_date
-FROM (
-    SELECT
-        $2::string AS user_id,
-        $4::string AS session_id,
-        $5::string AS action,
-        $7::timestamp AS action_ts,
-        $9::date AS etl_run_date
-    FROM @ANALYTICS.silver_stage/weblogs_clean/
-    (FILE_FORMAT => 'ANALYTICS.csv_format', PATTERN => '.*\\.csv')
-) AS w
+    (COUNT(*) > 50)                                                  AS is_high_activity,
+    MAX(w.etl_run_date)                                              AS etl_run_date
+FROM STAGING.WEBLOGS_CLEAN AS w
 JOIN ANALYTICS.DIM_USER AS u ON w.user_id = u.user_id
 WHERE NOT EXISTS (
     SELECT 1 FROM ANALYTICS.AGG_SESSION_METRICS AS a WHERE a.session_id = w.session_id
 )
-GROUP BY w.session_id, u.user_sk, w.etl_run_date;
+GROUP BY w.session_id, u.user_sk;

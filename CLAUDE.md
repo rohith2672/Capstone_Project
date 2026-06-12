@@ -145,13 +145,29 @@ All ten queries run against `ANALYTICS` schema (full SQL in spec lines 392–457
 **Status as of 2026-06-07: Project initialized — spec received, git repo created, no
 implementation started yet.**
 
+**2026-06-12: Fixed `session_duration_s = 0` bug in `ANALYTICS.AGG_SESSION_METRICS`.**
+Root cause: the Gold-layer DML (`build_agg_session_metrics.sql`,
+`load_fact_user_activity.sql`, `merge_dim_user.sql`, `merge_dim_product.sql`) re-parsed
+raw `silver_stage` files as CSV with positional `$N` references, but `pipeline.py`
+writes Parquet to that prefix with a different column layout — so `action_ts` resolved
+to `NULL` for every row and `MIN(action_ts) = MAX(action_ts)`. Fixed by:
+- `etl/pipeline.py` `transform()` now renames `timestamp` → `action_ts` and stamps
+  `etl_run_id`/`etl_run_date` on the Silver weblogs DataFrame.
+- Added missing `sql/ddl/02_raw_tables.sql` and `sql/ddl/03_staging_tables.sql`
+  (RAW/STAGING schemas + tables were never created, so `COPY INTO STAGING.WEBLOGS_CLEAN`
+  had no target).
+- All four Gold DML scripts now read from `STAGING.WEBLOGS_CLEAN` /
+  `STAGING.USERS_CLEAN` / `STAGING.PRODUCTS_CLEAN` (populated via
+  `COPY INTO ... MATCH_BY_COLUMN_NAME` from Silver Parquet) instead of re-parsing stage
+  files.
+
 | Area | Status | Notes |
 |---|---|---|
 | Sample data generation | Not Started | Run generator script to produce input CSVs |
 | Phase 1 — Extract → Bronze | Not Started | |
 | Phase 2 — Transform → Silver | Not Started | |
 | Phase 3 — Python Engineering (`WebLogProcessor`, helpers, tests) | Not Started | |
-| Phase 4 — Load → Gold (DDL + MERGE upserts) | Not Started | |
+| Phase 4 — Load → Gold (DDL + MERGE upserts) | In Progress | RAW/STAGING/ANALYTICS DDL + MERGE/INSERT scripts now read from STAGING tables (see 2026-06-12 note) |
 | Phase 5 — SQL Analytics (10 BI queries) | Not Started | |
 | Phase 6 — Data Quality & Auditing | Not Started | |
 | Phase 7 — Performance & Optimization | Not Started | |
